@@ -1,0 +1,4 @@
+% robots ask permission. R3
+
+forall n,m:Nat, z:Zone . val(n < 3 && m < 3 && n != m) =>
+[true*.want_zone(n,z)]<(!grant_clearance(n) && !move_arm(n,z))*.grant_clearance(n).(!grant_clearance(n) && !move_arm(n,z))*.grant_clearance(n).(!grant_clearance(n) && !move_arm(n,z))*.move_arm(n,z)>true

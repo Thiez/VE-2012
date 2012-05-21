@@ -1,0 +1,3 @@
+% ensure products get finished.
+
+[true*]<true*.outgoing_product>true

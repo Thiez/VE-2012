@@ -1,0 +1,4 @@
+% instruction ack, R5
+
+forall n:Nat, z,z_more:Zone . val(n < 3) =>
+[true*.want_zone(n,z).!work*.work]<!want_zone(n,z_more)*.confirmation(n)>true

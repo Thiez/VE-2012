@@ -1,0 +1,4 @@
+% an actuator or sensor error triggers co-errors in other robots
+
+forall n,m,j:Nat,e:Error . val(n < 3 && m < 3 && j < 3 && n != m && m != j && j != n && e != communication_error && e != co_error) =>
+[true*.fault(n,e)]<true*.((fault(m,co_error) . fault(j,co_error)) + (fault(j,co_error) . fault(m,co_error)))>true

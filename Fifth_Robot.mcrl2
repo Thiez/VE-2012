@@ -2,6 +2,8 @@ sort
 	Zone = struct offline | idle | a | b | c | d;
 	Error = struct actuator_error | sensor_error | communication_error | co_error;
 
+
+
 map	instructions : List(List(Zone));
 eqn	instructions = [[a,b],[a,b],[a,b]];
 

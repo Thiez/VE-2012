@@ -1,0 +1,86 @@
+% Eerste poging voor een model van de robots.
+% Controller doet nog niet meer dan 1 robot tegelijk aansturen.
+% En er zijn nog geen error states.
+% Robots acknowledgen op dit moment nooit acquires.
+% Ik vrees dat we vrij veel processen per robot nodig gaan hebben.
+
+sort Robo	= struct R1 | R2 | R3;
+sort Zone	= struct zoneA | zoneB | zoneC | zoneD | zoneIdle;
+
+map other1:Robo -> Robo;
+	other2:Robo -> Robo;
+eqn	other1(R1) = R2;
+	other1(R2) = R1;
+	other1(R3) = R1;
+	other2(R1) = R3;
+	other2(R2) = R3;
+	other2(R3) = R2;
+
+act	send_goZone, recv_goZone, goZone : Robo # Zone;		% beweegt de arm naar een bepaalde zone.
+	send_do_acq, recv_do_acq, do_acq: Robo # Zone;		% geeft aan dat een zone geclaimt moet worden
+	send_acq, recv_acq, acq : Robo # Zone;				% voert een 'acquire' uit op een zone.
+	send_acq_ok, recv_acq_ok, acq_ok : Robo;			% geeft aan dat acquire gelukt is.
+	send_ack, recv_ack, ack : Robo # Zone;
+	send_instr, recv_instr, instr : Robo # Zone;
+	send_instr_ack, recv_instr_ack, instr_ack : Robo # Zone;
+	send_instr_nack, recv_instr_nack, instr_nack : Robo # Zone;
+	send_prod_arrive, recv_prod_arrive, prod_arrive : Robo;
+	send_prod_leave, recv_prod_leave, prod_leave : Robo;
+	work;
+
+% This controller is too simple, it never activates more than 1 robot at a time.
+proc Controller(n:Int) =
+	(sum r:Robo . sum z:Zone . send_instr(r,z) . ( recv_instr_ack(r,z) + recv_instr_nack(r,z) )
++	send_prod_arrive(R1) . send_prod_arrive(R2) . send_prod_arrive(R3)
++	send_prod_leave(R1) . send_prod_arrive(R2) . send_prod_arrive(R3))
+.	((0 < n) -> Controller(n-1) + (n <= 0) -> delta);
+
+% Tracks the position of the arm of a single Robot. Does not check for illegal moves.
+proc RobotArm(r:Robo,zone:Zone) =
+	sum z:Zone . recv_goZone(r, z) . RobotArm(r, z);
+
+% Initializes the robot in a 'waiting for product' state.
+proc RobotInit(r:Robo,myZones:Set(Zone)) =
+	recv_prod_arrive(r) . Robot(r,myZones);
+
+proc RobotAcquireAcknowledger(r:Robo,myZone:Zone) =
+	% we ack when we're not using a zone ourselves.
+	(sum z:Zone . recv_acq(r,z) . (z != myZone) -> send_ack(r,z) . RobotAcquireAcknowledger(r,myZone))
+	% we always acknowledge requests for zoneIdle.
++	(recv_acq(r,zoneIdle) . send_ack(r,zoneIdle) . RobotAcquireAcknowledger(r,myZone))
+	% keep track of our own position.
++	(sum z:Zone . recv_goZone(r, z) . RobotAcquireAcknowledger(r,z));
+	
+
+proc Robot(r:Robo,myZones:Set(Zone)) =
+% receive executable instruction:
+	((sum z:Zone . (z in myZones) ->  recv_instr(r,z) . send_do_acq(r,z) . recv_acq_ok(r) . send_goZone(r, z) . work . send_goZone(r, zoneIdle) . send_instr_ack(r,z))
+% receive unexecutable instruction:
++	(sum z:Zone . !(z in myZones) -> recv_instr(r,z) . send_instr_nack(r,z) . Robot(r, myZones))
+% producs leave/arrive
++	(recv_prod_leave(r) . recv_prod_arrive(r)))
+% and loop forever.
+.	Robot(r,myZones);
+
+proc RobotAcquire(r:Robo) =
+	% acquires a zone
+	sum z:Zone . recv_do_acq(r,z) . send_acq(other1(r),z) . recv_ack(other1(r),z) . send_acq(other2(r),z) . recv_ack(other2(r),z) . send_acq_ok(r) . RobotAcquire(r);
+
+proc	Robot1	=	RobotArm(R1,zoneIdle) || RobotInit(R1, {zoneA, zoneD, zoneC, zoneIdle}) || RobotAcquireAcknowledger(R1, zoneIdle) || RobotAcquire(R1);
+		Robot2	=	RobotArm(R2,zoneIdle) || RobotInit(R2, {zoneA, zoneD, zoneB, zoneIdle}) || RobotAcquireAcknowledger(R2, zoneIdle) || RobotAcquire(R2);
+		Robot3	=	RobotArm(R3,zoneIdle) || RobotInit(R3, {zoneB, zoneD, zoneC, zoneIdle}) || RobotAcquireAcknowledger(R3, zoneIdle) || RobotAcquire(R3);
+		System	=	Robot1 || Robot2 || Robot3 || Controller(1);
+
+init
+	allow({ goZone, acq, instr, instr_ack, instr_nack, prod_arrive, prod_leave, work, do_acq, ack, acq_ok},
+	comm({	send_goZone | recv_goZone -> goZone,
+			send_instr | recv_instr -> instr,
+			send_instr_ack | recv_instr_ack -> instr_ack,
+			send_instr_nack | recv_instr_nack -> instr_nack,
+			send_prod_arrive | recv_prod_arrive -> prod_arrive,
+			send_do_acq | recv_do_acq -> do_acq,
+			send_acq | recv_acq -> acq,
+			send_ack | recv_ack -> ack,
+			send_acq_ok | recv_acq_ok -> acq_ok,
+			send_prod_leave | recv_prod_leave -> prod_leave},
+	System ));

@@ -1,4 +1,5 @@
 % Robots don't leave idle state when there is no product. Requirement R2
+% works on first version of token_robot
 
 forall n:Nat, z:Zone . val(n < 3) =>
-[true*.outgoing_product.!incoming_product*.move_arm(n,z)]false
+[true*.outgoing_product.!incoming_product*.moveToZone(n,z)]false

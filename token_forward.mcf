@@ -1,0 +1,5 @@
+% ensures the token is always forwarded
+% works on first version of token_robot
+
+forall n:Nat . val(n < 3) =>
+[true*]<true*.forw_token(n)>true

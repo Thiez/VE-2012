@@ -1,3 +1,4 @@
 % deadlock freedom
+% works on first version of token_robot
 
 [true*]<true>true

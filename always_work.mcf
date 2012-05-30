@@ -1,3 +1,4 @@
 % ensure that work gets done.
 
-[true*]<true*.work>true
+forall n:Nat . val(n < 3) =>
+[true*]<true*.confirmation(n)>true

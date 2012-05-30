@@ -1,0 +1,4 @@
+% ensures all robots always eventually finish their instructions
+% does *not* pass on first version of token_robot
+
+[true*]<true* . all_clear>true

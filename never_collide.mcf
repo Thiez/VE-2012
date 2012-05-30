@@ -1,4 +1,4 @@
 % checks that no two arms are in the same zone at the same time. Corresponds to requirement R1
 
-forall n,other_n:Nat, z:Zone . val(n < 3 && other_n < 3 && z != idle) =>
-[true*.move_arm(n,z)]<(!move_arm(n,idle))*.move_arm(other_n,z)>false
+forall n,other_n:Nat, z:Zone . val(n < 3 && other_n < 3 && n!=other_n && z != idle) =>
+[true*.moveToZone(n,z).(!moveToZone(n,idle))*.moveToZone(other_n,z)] false

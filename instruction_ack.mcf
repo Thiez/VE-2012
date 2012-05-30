@@ -1,4 +1,5 @@
 % instruction ack, R5
+% works on first version of token_robot
 
-forall n:Nat, z,z_more:Zone . val(n < 3) =>
-[true*.want_zone(n,z).!work*.work]<!want_zone(n,z_more)*.confirmation(n)>true
+forall n:Nat, z,z_more:Zone . val(n < 3 && z != idle) =>
+[true*.moveToZone(n,z).!moveToZone(n,idle)*.moveToZone(n,idle).!moveToZone(n,z_more)*.confirmation(n)]true

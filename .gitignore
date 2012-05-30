@@ -1,6 +1,9 @@
-*.class
 
-# Package Files #
-*.jar
-*.war
-*.ear
+# Generated Files #
+*.lps
+*.lts
+*.trc
+*.pbes
+
+# Java stuff: #
+*.class

@@ -1,0 +1,9 @@
+always_eventually_allclear.mcf : true
+always_products.mcf : true
+always_work.mcf : true
+instruction_ack.mcf : true
+never_collide.mcf : true
+no_deadlock.mcf : true
+robots_ask_permission.mcf :
+robots_idle_while_no_product.mcf : true
+token_forward.mcf : true

@@ -1,4 +1,4 @@
 % A robot enters an error state after detecting a fault, R4.1
 
-forall n:Nat,e:Error . val(n < 3) =>
-[true*.fault(n,e)]Error_state(n)
+forall n:Nat,e:Error,z:Zone . val(n < 3) =>
+[true* . fault(n,e)]<moveToZone(n,z)>false

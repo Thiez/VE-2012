@@ -1,0 +1,27 @@
+Functionele requirements zoals in ons originele document:
+
+R1:		There shall never be more than one robot in a zone.
+R2:		Robots shall not leave their idle position when no product is available.
+R3:		Robots shall acquire permission from other robots before entering a zone.
+R4.1:	When a robot detects an error, it enters an error-state.
+R4.2:	When a robot enters an error state, other robots must enter a Co-error state.
+R5:		Robots shall sent positive acknowledgement to the instructor after completing an instruction.
+
+Van deze requirements hebben wij R3 laten vallen: het enige nut van deze requirement was om R1 mogelijk te maken, en uit onze tests blijkt R1 waar te zijn, dus dit impliceert dat R3 waar is (of niet nodig is om veiligheid van het systeem te garanderen). De requirement is hoe dan ook overbodig.
+
+Hieronder de files die overeen komen met de requirements:
+
+R1:		never_collide.mcf
+R2:		robots_idle_while_no_product.mcf
+R3:		<bestaat niet meer>
+R4.1:	error_forces_error_state.mcf	<Test strict gezien een andere conditie: dat een robot stopt met bewegen nadat hij een error ontvangen heeft>
+R4.2:	<Niet te testen: als twee robots tegelijk een error detecten kan het gebeuren dat ze allebei naar een Error state gaan (en dus gaan niet alle andere robots naar de 'co-error' state>
+R5:		instruction_ack.mcf
+
+Bovendien hebben wij de volgende requirements toegevoegd om het systeem te testen:
+
+always_eventually_allclear.mcf		- Test dat er altijd uiteindelijk een product af is.
+always_products.mcf					- Ditto.
+alway_work.mcf						- Test dat er altijd uiteindelijk een robot gaat werken.
+no_deadlock.mcf						- Test of er deadlocks in het systeem zitten.
+token_forward.mcf					- Test of de token altijd uiteindelijk geforward wordt (dit is geen eis aan het systeem: als twee van de robots nooit instructies krijgen hebben ze de token ook nooit nodig).

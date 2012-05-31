@@ -6,6 +6,9 @@ map	instructions : List(List(Zone));
 eqn	instructions = [[a,b],[a,b],[a,b]];
 % eqn instructions = [[a,b,c],[a],[a]];
 
+map errors_on : Bool;
+eqn errors_on = true;
+
 act
 	recv_bring_offline, send_bring_offline, bring_offline;
 	recv_bring_online, send_bring_online, bring_online;
@@ -19,6 +22,9 @@ act
 	recv_issue_instructions, send_issue_instructions, issue_instructions : Nat # List(Zone);
 	recv_all_done, send_all_done, all_done : Nat;
 	
+	recv_goError, send_goError, goError : Nat # Error;
+	fault : Nat # Error;
+	
 	% Platform internals
 	incoming_product, outgoing_product;
 	
@@ -27,10 +33,11 @@ act
 
 proc
 	Permissions(nr:Nat, curr:Zone, want:List(Zone), token:Bool, working:Bool, online:Bool) =
+		(sum err:Error . recv_goError(nr,err) . delta) +
 		online -> (
 			(curr == idle) -> recv_bring_offline . Permissions(online=false) +	% only go offline if we are idle.
 			sum more_wants:List(Zone) . recv_issue_instructions(nr,more_wants) . Permissions(want=want++more_wants) +
-			recv_doneWork(nr) . send_moveToZone(nr,idle) . send_confirmation(nr) . ((want == []) -> send_all_done(nr) <> tau) . Permissions(curr=idle,working=false) +
+			recv_doneWork(nr) . send_moveToZone(nr,idle) . send_confirmation(nr) . ((want == []) -> send_all_done(nr) <> Permissions(curr=idle,working=false)) . Permissions(curr=idle,working=false) +
 			token -> (
 				(want == [] || working) -> send_token((nr+1) mod 3) . Permissions(token=false) +
 				sum targ:Zone . (want != [] && targ == head(want) && !working) -> (
@@ -54,9 +61,13 @@ proc
 		
 	
 	Actuator(nr:Nat, curr:Zone, working:Bool) =
+		errors_on -> ( HaveError(nr,actuator_error) + HaveError(nr,sensor_error) ) +
 		sum targ:Zone . recv_moveToZone(nr,targ) .
 			(targ != idle) -> Actuator(curr=targ,working=true) <> Actuator(curr=targ) +	% If we go to a zone other than idle, start working
 		(working) -> send_doneWork(nr) . Actuator(working=false);
+	
+	HaveError(nr:Nat, err:Error) =
+		fault(nr,err) . send_goError(nr,err) . send_goError((nr+1) mod 3,co_error) . send_goError((nr+2) mod 3,co_error) . delta;
 	
 	Platform =
 		incoming_product . send_bring_online . recv_all_clear . send_bring_offline . outgoing_product . send_all_clear_conf . Platform;
@@ -84,7 +95,7 @@ proc
 init
 	allow(
 		{
-			bring_offline, bring_online, forw_token, doneWork, confirmation, requestClearance, denyClearance, grantClearance, moveToZone, issue_instructions, all_clear, all_clear_conf, incoming_product, outgoing_product, all_done
+			bring_offline, bring_online, forw_token, doneWork, confirmation, requestClearance, denyClearance, grantClearance, moveToZone, issue_instructions, all_clear, all_clear_conf, incoming_product, outgoing_product, all_done , goError, fault
 		}, comm(
 			{
 				recv_bring_offline | recv_bring_offline | recv_bring_offline | send_bring_offline -> bring_offline,
@@ -98,7 +109,9 @@ init
 				recv_moveToZone | send_moveToZone -> moveToZone,
 				recv_issue_instructions | send_issue_instructions -> issue_instructions,
 				recv_all_done | send_all_done -> all_done,
-
+				
+				recv_goError | send_goError -> goError,
+				
 				recv_all_clear | send_all_clear -> all_clear,
 				recv_all_clear_conf | send_all_clear_conf -> all_clear_conf
 			}, Test

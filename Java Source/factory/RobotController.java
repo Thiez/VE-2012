@@ -9,9 +9,9 @@ public class RobotController implements Runnable{
 	private String reachableZones;
 	private String instructionSet;
 	public RobotActuator actuator;
-	private boolean working;
 	private boolean token;
 	private boolean online;
+	private boolean shutdown;
 	
 	/**
 	 * creates a new instance of the RobotController class.
@@ -24,25 +24,43 @@ public class RobotController implements Runnable{
 		this.reachableZones = zones;
 		this.factory = factory;
 		actuator = new RobotActuator(this);
+		Thread actuatorThread = new Thread(actuator,"actuator-"+robotNr);
+		actuatorThread.start();
 		instructionSet = "";
+		shutdown = false;
 	}
 	
 	public void run(){
 		System.out.println("Robot " + robotNr + " starting...");
 		RobotController next_robot = factory.getRobot((robotNr + 1) % FactoryModel.NR_OF_ROBOTS);
-		while(true){
+		while(!shutdown){
 			if(online){
 				if (!instructionSet.equals("")){
-					System.out.println("Robot " + robotNr + "'s instruction set currently is: " + instructionSet);
+					//I'm not done but I dont have the token, wake up lazyheads...
+					if(!token) synchronized(factory){factory.notifyAll();}
+
 					char nextInstruction = instructionSet.charAt(0);
 					//check if token & possible to go to zone. If so, execute instruction.
-					if (token == true && askPermission(nextInstruction)){
+					if (token == true && validZone(nextInstruction)){
+						boolean permission = askPermission(nextInstruction);
+						if(permission){
+							System.out.println("Permission was granted. Passing token.");
+							instructionSet = instructionSet.substring(1);
+							executeInstruction(nextInstruction);
+							System.out.println("Robot " + robotNr + ": Executing instruction. Current set is: " + instructionSet);
+							//TODO: this needs to be changed to a call to the controller eventually, nack'ing the instruction.
+						}else System.out.println("permission was denied to robot " + robotNr + ", passing token.");
+					}else if(!validZone(nextInstruction)){
+						System.out.println("robot " + robotNr + ": " + nextInstruction + " is not a reachable zone, skipping.");
 						instructionSet = instructionSet.substring(1);
-						executeInstruction(nextInstruction);
 					}
-				}else System.out.println("Robot " + robotNr + " is idling...");
+				}else{
+					synchronized(factory){
+						try {factory.wait();}
+						catch(InterruptedException e){System.out.println("Interrupts are deprecated, wut is this.");}
+					}
+				}
 				if(token){
-					System.out.println("Passing token from robot " + robotNr + " to robot " + ((robotNr+1) % FactoryModel.NR_OF_ROBOTS));
 					setToken(false);
 					next_robot.setToken(true);
 				}
@@ -51,6 +69,15 @@ public class RobotController implements Runnable{
 				Thread.sleep(1000);
 			}catch(InterruptedException e){System.err.println("an interruptedException happened.");}
 		}
+	}
+
+	/**
+	 * Returns whether the tested zone is a valid zone (i.e., reachable) by checking the reachableZones String.
+	 * @param char zone: zone to check
+	 * @return boolean result: whether this is a reachable zone
+	 */
+	private boolean validZone(char zone){
+		return (reachableZones.indexOf(zone) != -1);
 	}
 	
 	/**
@@ -61,8 +88,10 @@ public class RobotController implements Runnable{
 	private boolean askPermission(char zone){
 		boolean result = true;
 		int nextRobot = (robotNr + 1) % FactoryModel.NR_OF_ROBOTS;
-		for (int i = nextRobot; (i==robotNr) || result == false; i = (i+1) % FactoryModel.NR_OF_ROBOTS){
-			result = (factory.getRobot(i).grantPermission(zone));
+		for (int i = nextRobot; !(i==robotNr); i = (i+1) % FactoryModel.NR_OF_ROBOTS){
+			System.out.println("robot "+ robotNr + " asks permission of " + i);
+			result = result && (factory.getRobot(i).grantPermission(zone));
+			System.out.println("robot " + i + " says " + result + " to zone " + zone);
 		}
 		return result;
 	}
@@ -94,8 +123,8 @@ public class RobotController implements Runnable{
 	 * is done working in the current zone.
 	 * @param working
 	 */
-	public void setWorking(boolean working){
-		this.working = working;
+	public boolean isWorking(){
+		return actuator.working();
 	}
 	
 	/**
@@ -113,8 +142,6 @@ public class RobotController implements Runnable{
 	 * @param token
 	 */
 	public void setToken(boolean token){
-		if(token) System.out.println("Robot "+robotNr+": I have the token!");
-		else System.out.println("Robot " + robotNr+": I no longer have the token.");
 		this.token = token;
 	}
 	
@@ -128,6 +155,12 @@ public class RobotController implements Runnable{
 		this.online = online;
 	}
 	
+	public void doneWork(){
+		actuator.executeInstruction(Zones.IDLE);
+		//todo: some sort of ack/nack needs to be sent to the controller. In the current system, however,
+		//the controller is a human entity and as such, the "factorycontroller" is an unknown entity. Possibly do this with wait and notify?
+	}
+	
 	/**
 	 * checks whether the robot has performed all of its instructions. This method should
 	 * be called by the supervising entity, which can respond to all robots being done by
@@ -135,9 +168,17 @@ public class RobotController implements Runnable{
 	 * @return done: is true when no instructions are queued or in progress.
 	 */
 	public boolean allDone(){
-		boolean result = false;
-		if (instructionSet == "") result = true;
-		return result;
+		return (instructionSet.equals(""));
 	}
+	
+	/**
+	 * Signals the thread to stop at the earliest convenience. Note that waking the threads takes place in the factoryModel,
+	 * to centralize the entire affair and prevent unneccesary executions.
+	 */
+	public void quit(){
+		actuator.quit();
+		shutdown = true;
+	}
+	
 	
 }

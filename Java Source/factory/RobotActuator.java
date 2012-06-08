@@ -1,10 +1,13 @@
 package factory;
 
-public class RobotActuator {
+import java.util.Random;
+
+public class RobotActuator implements Runnable{
 
 	private char currentZone;
 	private RobotController controller;
 	private boolean working;
+	private boolean shutdown;
 	
 	public RobotActuator(RobotController parent){
 		controller = parent;
@@ -18,6 +21,19 @@ public class RobotActuator {
 	 */
 	public char getZone(){
 		return currentZone;
+	}
+	
+	public void run(){
+		while(!shutdown){
+			//sleep for .5 seconds, then check if the process still needs work.
+			try{Thread.sleep(500);}
+			catch(InterruptedException e){System.out.println("oh noes, an interruptedException.");}
+			if(working){
+				//chance of 1 in 35 to stop working.
+				working = (new Random().nextInt(35) != 0);
+				if (!working) reportDone();
+			}
+		}
 	}
 	
 	/**
@@ -35,6 +51,7 @@ public class RobotActuator {
 	 */
 	
 	private void moveArm(char zone){
+		System.out.println("Moving to zone: "+zone);
 		currentZone = zone;
 	}
 	
@@ -46,10 +63,9 @@ public class RobotActuator {
 	 */
 	public void executeInstruction(char zone){
 		moveArm(zone);
-		work();
-		moveArm(Zones.IDLE);
-		reportDone();
-		System.out.println("instruction at "+ zone + " successfully completed.");
+		if(zone != Zones.IDLE){
+			work();
+		}
 	}
 	
 	/**
@@ -57,14 +73,17 @@ public class RobotActuator {
 	 * sets the working field to false.
 	 */
 	private void work(){
-		working = false;
+		working = true;
 	};
 	
 	/**
 	 * reports the completion of the instruction to the robot controller.
 	 */
 	private void reportDone(){
-		controller.setWorking(false);
+		System.out.println("Instruction completed.");
+		controller.doneWork();
 	}
+	
+	public void quit(){shutdown = true;}
 	
 }

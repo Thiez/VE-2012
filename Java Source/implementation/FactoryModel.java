@@ -27,6 +27,13 @@ public class FactoryModel {
 	public Platform getPlatform(){
 		return platform;
 	}
+	
+	public void quit(){
+		for(int i=0;i<robots.length;i++)robots[i].quit();
+		synchronized(this){this.notifyAll();}
+		platform.shutdown();
+	}
+	
 	public RobotController getRobot(int robot){
 		return robots[robot];
 	}

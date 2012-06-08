@@ -3,22 +3,22 @@ package factory;
 import implementation.*;
 
 public class Platform implements Runnable{
-	private boolean product;
 	private FactoryModel factory;
+	private boolean shutdown;
 	
 	public Platform(FactoryModel factory){
+		shutdown = false;
 		this.factory = factory;
-		product = false;
 	}
 	
 	public void run(){
 		System.out.println("platform starting...");
-		newProduct();
-		while(product){
-			//if(!product) newProduct();
-			try{
-			Thread.sleep(5000);
-			}catch(InterruptedException e){System.out.println("platform was unexpectedly interrupted.");}
+		while(!shutdown){
+			newProduct();
+			synchronized(this){
+				try{this.wait();}
+				catch(InterruptedException e){System.out.println("an interruptedexception happened, wut?");}
+			}
 		}
 	}
 	
@@ -29,13 +29,18 @@ public class Platform implements Runnable{
 	}
 	
 	public void newProduct(){
-		product = true;
+		//Product is now available.
 		setOnlineStatus(true);
 	}
 		
 	public void removeProduct(){
 		setOnlineStatus(false);
-		product = false;
+		//Product is now no longer available.
+	}
+	
+	public void shutdown(){
+		shutdown = true;
+		synchronized(this){this.notify();}
 	}
 	
 }

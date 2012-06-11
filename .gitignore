@@ -7,3 +7,6 @@
 
 # Java stuff: #
 *.class
+
+# JTorX #
+jtorx-1.9.3*

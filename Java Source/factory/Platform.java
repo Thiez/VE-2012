@@ -12,7 +12,7 @@ public class Platform implements Runnable{
 	}
 	
 	public void run(){
-		System.out.println("platform starting...");
+		System.out.println("[System] platform starting...");
 		while(!shutdown){
 			newProduct();
 			synchronized(this){

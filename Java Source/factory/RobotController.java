@@ -31,7 +31,7 @@ public class RobotController implements Runnable{
 	}
 	
 	public void run(){
-		System.out.println("Robot " + robotNr + " starting...");
+		System.out.println("[System] Starting up...");
 		RobotController next_robot = factory.getRobot((robotNr + 1) % FactoryModel.NR_OF_ROBOTS);
 		while(!shutdown){
 			if(online){
@@ -44,14 +44,14 @@ public class RobotController implements Runnable{
 					if (token == true && validZone(nextInstruction)){
 						boolean permission = askPermission(nextInstruction);
 						if(permission){
-							System.out.println("Permission was granted. Passing token.");
+							System.out.println("Robot "+robotNr+": permission was granted. Passing token.");
 							instructionSet = instructionSet.substring(1);
 							executeInstruction(nextInstruction);
-							System.out.println("Robot " + robotNr + ": Executing instruction. Current set is: " + instructionSet);
+							System.out.println("Robot " + robotNr + ": Executing instruction. Current set is: '" + instructionSet + "'");
 							//TODO: this needs to be changed to a call to the controller eventually, nack'ing the instruction.
-						}else System.out.println("permission was denied to robot " + robotNr + ", passing token.");
+						}
 					}else if(!validZone(nextInstruction)){
-						System.out.println("robot " + robotNr + ": " + nextInstruction + " is not a reachable zone, skipping.");
+						System.out.println("Robot " + robotNr + ": " + nextInstruction + " is not a reachable zone, skipping.");
 						instructionSet = instructionSet.substring(1);
 					}
 				}else{
@@ -89,10 +89,9 @@ public class RobotController implements Runnable{
 		boolean result = true;
 		int nextRobot = (robotNr + 1) % FactoryModel.NR_OF_ROBOTS;
 		for (int i = nextRobot; !(i==robotNr); i = (i+1) % FactoryModel.NR_OF_ROBOTS){
-			System.out.println("robot "+ robotNr + " asks permission of " + i);
 			result = result && (factory.getRobot(i).grantPermission(zone));
-			System.out.println("robot " + i + " says " + result + " to zone " + zone);
 		}
+		if(!result) System.out.println("Robot "+robotNr+": Permission to move to zone '"+zone+"' was denied. Passing token.");
 		return result;
 	}
 	
@@ -179,6 +178,8 @@ public class RobotController implements Runnable{
 		actuator.quit();
 		shutdown = true;
 	}
+	
+	public int getNr(){return robotNr;}
 	
 	
 }

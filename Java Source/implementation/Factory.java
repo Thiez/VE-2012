@@ -28,9 +28,9 @@ public class Factory {
 			Thread.sleep(5000);
 			}catch(InterruptedException e){}
 		}
-		System.out.println("all done! Signaling product removal.");
+		System.out.println("[System] all done! Signaling product removal.");
 		model.getPlatform().removeProduct();
-		System.out.println("Done with product creation. Cleaning up & shutting down.");
+		System.out.println("[System] Done with product creation. Cleaning up & shutting down.");
 		controller.quit();
 	}
 

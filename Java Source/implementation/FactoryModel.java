@@ -17,7 +17,7 @@ public class FactoryModel {
 		platform = new Platform(this);
 		Thread p = new Thread(platform, "platform");
 		robots[0].setToken(true);
-		System.out.println("Robots and Platform successfully intialized...");
+		System.out.println("[System] Robots and Platform successfully intialized...");
 		robot1.start();
 		robot2.start();
 		robot3.start();

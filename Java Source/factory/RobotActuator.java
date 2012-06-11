@@ -19,7 +19,7 @@ public class RobotActuator implements Runnable{
 	 * returns the zone in which the robot currently resides.
 	 * @return char zone: a char which represents the current zone, where
 	 */
-	public char getZone(){
+	public  synchronized char getZone(){
 		return currentZone;
 	}
 	
@@ -29,8 +29,8 @@ public class RobotActuator implements Runnable{
 			try{Thread.sleep(500);}
 			catch(InterruptedException e){System.out.println("oh noes, an interruptedException.");}
 			if(working){
-				//chance of 1 in 35 to stop working.
-				working = (new Random().nextInt(35) != 0);
+				//chance of 1 in 30 to stop working.
+				working = (new Random().nextInt(30) != 0);
 				if (!working) reportDone();
 			}
 		}
@@ -50,8 +50,8 @@ public class RobotActuator implements Runnable{
 	 * @param zone
 	 */
 	
-	private void moveArm(char zone){
-		System.out.println("Moving to zone: "+zone);
+	private synchronized void moveArm(char zone){
+		System.out.println("Robot "+controller.getNr()+": Moved to zone: "+zone);
 		currentZone = zone;
 	}
 	
@@ -80,7 +80,7 @@ public class RobotActuator implements Runnable{
 	 * reports the completion of the instruction to the robot controller.
 	 */
 	private void reportDone(){
-		System.out.println("Instruction completed.");
+		System.out.println("Robot "+controller.getNr()+": Instruction completed.");
 		controller.doneWork();
 	}
 	

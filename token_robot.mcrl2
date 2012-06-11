@@ -7,7 +7,7 @@ eqn	instructions = [[a,b],[a,b],[a,b]];
 % eqn instructions = [[a,b,c],[a],[a]];
 
 map errors_on : Bool;
-eqn errors_on = true;
+eqn errors_on = false;
 
 act
 	recv_bring_offline, send_bring_offline, bring_offline;
@@ -15,6 +15,7 @@ act
 	recv_token, send_token, forw_token : Nat;
 	recv_doneWork, send_doneWork, doneWork : Nat;
 	recv_confirmation, send_confirmation, confirmation : Nat;
+	recv_rejection, send_rejection, rejection : Nat;
 	recv_requestClearance, send_requestClearance, requestClearance : Nat # Nat # Zone;
 	recv_denyClearance, send_denyClearance, denyClearance : Nat;
 	recv_grantClearance, send_grantClearance, grantClearance : Nat;
@@ -32,15 +33,18 @@ act
 	recv_all_clear_conf, send_all_clear_conf, all_clear_conf;
 
 proc
-	Permissions(nr:Nat, curr:Zone, want:List(Zone), token:Bool, working:Bool, online:Bool) =
+	Permissions(nr:Nat, curr:Zone, want:List(Zone), token:Bool, working:Bool, online:Bool,myZones:Set(Zone)) =
 		(sum err:Error . recv_goError(nr,err) . delta) +
 		online -> (
 			(curr == idle) -> recv_bring_offline . Permissions(online=false) +	% only go offline if we are idle.
 			sum more_wants:List(Zone) . recv_issue_instructions(nr,more_wants) . Permissions(want=want++more_wants) +
 			recv_doneWork(nr) . send_moveToZone(nr,idle) . send_confirmation(nr) . ((want == []) -> send_all_done(nr) <> Permissions(curr=idle,working=false)) . Permissions(curr=idle,working=false) +
+			(sum targ:Zone . (want != [] && targ == head(want) && !working && !(targ in myZones)) -> (
+					send_rejection(nr) . ( (tail(want) == []) -> send_all_done(nr) <> Permissions(want=tail(want)) ) . Permissions(want=tail(want))
+				)) +
 			token -> (
 				(want == [] || working) -> send_token((nr+1) mod 3) . Permissions(token=false) +
-				sum targ:Zone . (want != [] && targ == head(want) && !working) -> (
+				sum targ:Zone . (want != [] && targ == head(want) && !working && targ in myZones) -> (
 					send_requestClearance(nr, (nr+1) mod 3, targ) . (
 						recv_denyClearance(nr) . send_token((nr+1) mod 3) . Permissions(token=false) + % If we can't get the zone. pass the token.
 						recv_grantClearance(nr) . send_requestClearance(nr, (nr+2) mod 3, targ) . (
@@ -77,6 +81,7 @@ proc
 		recv_all_done(1) . Instructor(done_1 = true) +
 		recv_all_done(2) . Instructor(done_2 = true) +
 		sum n:Nat . (n<3) -> recv_confirmation(n) . Instructor() +
+		sum n:Nat . (n<3) -> recv_rejection(n) . Instructor() +
 		(done_0 && done_1 && done_2) -> send_all_clear . recv_all_clear_conf . Instruct(instructions);
 	
 	Instruct(inQueue:List(List(Zone))) =
@@ -85,9 +90,9 @@ proc
 		send_issue_instructions(2,inQueue.0) . Instructor(false, false, false);
 	
 proc
-	Robot0 = Permissions(0,idle,[],true ,false,false) || Actuator(0,idle,false);
-	Robot1 = Permissions(1,idle,[],false,false,false) || Actuator(1,idle,false);
-	Robot2 = Permissions(2,idle,[],false,false,false) || Actuator(2,idle,false);
+	Robot0 = Permissions(0,idle,[],true ,false,false,{a,b,d,idle}) || Actuator(0,idle,false);
+	Robot1 = Permissions(1,idle,[],false,false,false,{a,c,d,idle}) || Actuator(1,idle,false);
+	Robot2 = Permissions(2,idle,[],false,false,false,{b,c,d,idle}) || Actuator(2,idle,false);
 	Robots = Robot0 || Robot1 || Robot2;
 	System = Platform || Robots;
 	Test = System || Instruct(instructions);
@@ -95,7 +100,7 @@ proc
 init
 	allow(
 		{
-			bring_offline, bring_online, forw_token, doneWork, confirmation, requestClearance, denyClearance, grantClearance, moveToZone, issue_instructions, all_clear, all_clear_conf, incoming_product, outgoing_product, all_done , goError, fault
+			bring_offline, bring_online, forw_token, doneWork, confirmation, requestClearance, denyClearance, grantClearance, moveToZone, issue_instructions, all_clear, all_clear_conf, incoming_product, outgoing_product, all_done , goError, fault, rejection
 		}, comm(
 			{
 				recv_bring_offline | recv_bring_offline | recv_bring_offline | send_bring_offline -> bring_offline,
@@ -103,6 +108,7 @@ init
 				recv_token |  send_token -> forw_token,
 				recv_doneWork | send_doneWork -> doneWork,
 				recv_confirmation | send_confirmation -> confirmation,
+				recv_rejection | send_rejection -> rejection,
 				recv_requestClearance | send_requestClearance -> requestClearance,
 				recv_denyClearance | send_denyClearance -> denyClearance,
 				recv_grantClearance | send_grantClearance -> grantClearance,

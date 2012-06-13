@@ -12,6 +12,7 @@ public class RobotController implements Runnable{
 	private boolean token;
 	private boolean online;
 	private boolean shutdown;
+	private int error;
 	
 	/**
 	 * creates a new instance of the RobotController class.
@@ -23,6 +24,7 @@ public class RobotController implements Runnable{
 		this.robotNr = robotNr;
 		this.reachableZones = zones;
 		this.factory = factory;
+		error = -1;
 		actuator = new RobotActuator(this);
 		Thread actuatorThread = new Thread(actuator,"actuator-"+robotNr);
 		actuatorThread.start();
@@ -31,10 +33,10 @@ public class RobotController implements Runnable{
 	}
 	
 	public void run(){
-		System.out.println("[System] Starting up...");
+		System.err.println("[System] Starting up...");
 		RobotController next_robot = factory.getRobot((robotNr + 1) % FactoryModel.NR_OF_ROBOTS);
 		while(!shutdown){
-			if(online){
+			if(online && (error == -1)){
 				if (!instructionSet.equals("")){
 					//I'm not done but I dont have the token, wake up lazyheads...
 					if(!token) synchronized(factory){factory.notifyAll();}
@@ -44,23 +46,25 @@ public class RobotController implements Runnable{
 					if (token == true && validZone(nextInstruction)){
 						boolean permission = askPermission(nextInstruction);
 						if(permission){
-							System.out.println("Robot "+robotNr+": permission was granted. Passing token.");
+							System.err.println("Robot "+robotNr+": permission was granted. Passing token.");
 							instructionSet = instructionSet.substring(1);
 							executeInstruction(nextInstruction);
-							System.out.println("Robot " + robotNr + ": Executing instruction. Current set is: '" + instructionSet + "'");
+							System.err.println("Robot " + robotNr + ": Executing instruction. Current set is: '" + instructionSet + "'");
 							//TODO: this needs to be changed to a call to the controller eventually, nack'ing the instruction.
 						}
 					}else if(!validZone(nextInstruction)){
-						System.out.println("Robot " + robotNr + ": " + nextInstruction + " is not a reachable zone, skipping.");
+						System.out.println("rejection!"+robotNr+")");
+						System.err.println("Robot " + robotNr + ": " + nextInstruction + " is not a reachable zone, skipping.");
 						instructionSet = instructionSet.substring(1);
 					}
 				}else{
 					synchronized(factory){
 						try {factory.wait();}
-						catch(InterruptedException e){System.out.println("Interrupts are deprecated, wut is this.");}
+						catch(InterruptedException e){System.err.println("Interrupts are deprecated, wut is this.");}
 					}
 				}
 				if(token){
+					System.out.println("forw_token!"+next_robot.getNr()+")");
 					setToken(false);
 					next_robot.setToken(true);
 				}
@@ -89,9 +93,14 @@ public class RobotController implements Runnable{
 		boolean result = true;
 		int nextRobot = (robotNr + 1) % FactoryModel.NR_OF_ROBOTS;
 		for (int i = nextRobot; !(i==robotNr); i = (i+1) % FactoryModel.NR_OF_ROBOTS){
-			result = result && (factory.getRobot(i).grantPermission(zone));
+			System.out.println("requestClearance!"+robotNr+"!"+i+"!"+Zones.zoneType(zone)+")");
+			boolean iResult = factory.getRobot(i).grantPermission(zone);
+			result = result && iResult;
+			if (iResult) System.out.println("grantClearance!"+robotNr+")");
+			else System.out.println("denyClearance!"+robotNr+")");
+			
 		}
-		if(!result) System.out.println("Robot "+robotNr+": Permission to move to zone '"+zone+"' was denied. Passing token.");
+		if(!result) System.err.println("Robot "+robotNr+": Permission to move to zone '"+zone+"' was denied. Passing token.");
 		return result;
 	}
 	
@@ -155,6 +164,7 @@ public class RobotController implements Runnable{
 	}
 	
 	public void doneWork(){
+		System.out.println("confirmation!"+robotNr+")");
 		actuator.executeInstruction(Zones.IDLE);
 		//todo: some sort of ack/nack needs to be sent to the controller. In the current system, however,
 		//the controller is a human entity and as such, the "factorycontroller" is an unknown entity. Possibly do this with wait and notify?
@@ -181,5 +191,10 @@ public class RobotController implements Runnable{
 	
 	public int getNr(){return robotNr;}
 	
-	
+	public void error(int error){
+		this.error = error;
+		//if this is not a co-error
+		if (error != 2) factory.setError(robotNr, error);
+		else System.err.println("Robot "+robotNr+": Going to co-error state...");
+	}
 }

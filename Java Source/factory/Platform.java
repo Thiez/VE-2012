@@ -12,17 +12,19 @@ public class Platform implements Runnable{
 	}
 	
 	public void run(){
-		System.out.println("[System] platform starting...");
+		System.err.println("[System] platform starting...");
 		while(!shutdown){
 			newProduct();
 			synchronized(this){
 				try{this.wait();}
-				catch(InterruptedException e){System.out.println("an interruptedexception happened, wut?");}
+				catch(InterruptedException e){System.err.println("an interruptedexception happened, wut?");}
 			}
 		}
 	}
 	
 	private void setOnlineStatus(boolean online){
+		if (online) System.out.println("bringOnline");
+			else System.out.println("bringOffline");
 		for(int i = 0; i<FactoryModel.NR_OF_ROBOTS; i++){
 			factory.getRobot(i).setOnline(online);
 		}

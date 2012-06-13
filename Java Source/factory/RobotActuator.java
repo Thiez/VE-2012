@@ -8,11 +8,13 @@ public class RobotActuator implements Runnable{
 	private RobotController controller;
 	private boolean working;
 	private boolean shutdown;
+	private int error;
 	
 	public RobotActuator(RobotController parent){
 		controller = parent;
 		currentZone = Zones.IDLE;
 		working = false;
+		error = -1;
 	}
 	
 	/**
@@ -27,11 +29,15 @@ public class RobotActuator implements Runnable{
 		while(!shutdown){
 			//sleep for .5 seconds, then check if the process still needs work.
 			try{Thread.sleep(500);}
-			catch(InterruptedException e){System.out.println("oh noes, an interruptedException.");}
-			if(working){
-				//chance of 1 in 30 to stop working.
-				working = (new Random().nextInt(30) != 0);
-				if (!working) reportDone();
+			catch(InterruptedException e){System.err.println("oh noes, an interruptedException.");}
+			if (error == -1){
+				error = detectError();
+				if (error != -1) controller.error(error);
+				if(working){
+					//chance of 1 in 30 to stop working.
+					working = (new Random().nextInt(30) != 0);
+					if (!working) reportDone();
+				}
 			}
 		}
 	}
@@ -51,7 +57,8 @@ public class RobotActuator implements Runnable{
 	 */
 	
 	private synchronized void moveArm(char zone){
-		System.out.println("Robot "+controller.getNr()+": Moved to zone: "+zone);
+		System.out.println("moveToZone!"+controller.getNr()+"!"+Zones.zoneType(zone)+")");
+		System.err.println("Robot "+controller.getNr()+": Moved to zone: "+zone);
 		currentZone = zone;
 	}
 	
@@ -80,8 +87,17 @@ public class RobotActuator implements Runnable{
 	 * reports the completion of the instruction to the robot controller.
 	 */
 	private void reportDone(){
-		System.out.println("Robot "+controller.getNr()+": Instruction completed.");
+		System.out.println("doneWork!"+controller.getNr()+")");
+		System.err.println("Robot "+controller.getNr()+": Instruction completed.");
 		controller.doneWork();
+	}
+	
+	private int detectError(){
+		int result = -1;
+		int errorSeed = new Random().nextInt(500);
+		if (errorSeed == 0) result = 0;
+		else if (errorSeed == 1) result = 1;
+		return result;
 	}
 	
 	public void quit(){shutdown = true;}

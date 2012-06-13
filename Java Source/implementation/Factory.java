@@ -10,8 +10,10 @@ public class Factory {
 
 	private static FactoryController controller;
 	private static FactoryModel model;	
-	
-	
+	private static int iterations;
+	private static int finishedProducts;
+
+
 	/**
 	 * Currently, this program does accept arguments from the command line, but does not use them.
 	 * Future implementations will possibly include a custom set of instructions given at startup.
@@ -20,17 +22,24 @@ public class Factory {
 	public static void main(String[] args) {
 		model = new FactoryModel();
 		controller = new FactoryController(model);
-		controller.issueInstructions(0, "aa");
-		controller.issueInstructions(1,"aa");
-		controller.issueInstructions(2,"aa");
-		while(!controller.checkIfDone()){
-			try{
-			Thread.sleep(5000);
-			}catch(InterruptedException e){}
+		finishedProducts = 0;
+		if (args.length == 0){
+			controller.issueInstructions(0, "a");
+			controller.issueInstructions(1,"a");
+			controller.issueInstructions(2,"a");
+			iterations = 1;
 		}
-		System.out.println("[System] all done! Signaling product removal.");
-		model.getPlatform().removeProduct();
-		System.out.println("[System] Done with product creation. Cleaning up & shutting down.");
+		while(finishedProducts < iterations){
+			while(!controller.checkIfDone()){
+				try{
+					Thread.sleep(5000);
+				}catch(InterruptedException e){}
+			}
+			System.err.println("[System] all done! Signaling product removal.");
+			iterations++;
+			model.getPlatform().removeProduct();
+		}
+		System.err.println("[System] Done with product creation. Cleaning up & shutting down.");
 		controller.quit();
 	}
 

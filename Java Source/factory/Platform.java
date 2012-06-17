@@ -23,8 +23,13 @@ public class Platform implements Runnable{
 	}
 	
 	private void setOnlineStatus(boolean online){
-		if (online) System.out.println("bringOnline");
-			else System.out.println("bringOffline");
+		if (online) {
+			//System.out.println("bringOnline");
+			Logger.getInstance().inform( ModelActions.bring_online );
+		} else {
+			//System.out.println("bringOffline");
+			Logger.getInstance().inform( ModelActions.bring_offline );
+		}
 		for(int i = 0; i<FactoryModel.NR_OF_ROBOTS; i++){
 			factory.getRobot(i).setOnline(online);
 		}

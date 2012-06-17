@@ -3,7 +3,8 @@ package factory;
 import java.util.Random;
 
 public class RobotActuator implements Runnable{
-
+	
+	private Logger log = Logger.getInstance();
 	private char currentZone;
 	private RobotController controller;
 	private boolean working;
@@ -57,7 +58,8 @@ public class RobotActuator implements Runnable{
 	 */
 	
 	private synchronized void moveArm(char zone){
-		System.out.println("moveToZone!"+controller.getNr()+"!"+Zones.zoneType(zone)+")");
+		//System.out.println("moveToZone!"+controller.getNr()+"!"+Zones.zoneType(zone)+")");
+		log.inform( ModelActions.moveToZone, controller.getNr(), Zones.zoneType(zone) );
 		System.err.println("Robot "+controller.getNr()+": Moved to zone: "+zone);
 		currentZone = zone;
 	}
@@ -87,7 +89,8 @@ public class RobotActuator implements Runnable{
 	 * reports the completion of the instruction to the robot controller.
 	 */
 	private void reportDone(){
-		System.out.println("doneWork!"+controller.getNr()+")");
+		//System.out.println("doneWork!"+controller.getNr()+")");
+		log.inform( ModelActions.doneWork, controller.getNr() );
 		System.err.println("Robot "+controller.getNr()+": Instruction completed.");
 		controller.doneWork();
 	}

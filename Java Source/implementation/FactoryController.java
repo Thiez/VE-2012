@@ -22,7 +22,8 @@ public class FactoryController {
 		}
 		int lastChar = listInstructions.length()-1;
 		listInstructions = listInstructions.substring(0,lastChar) + "]";
-		System.out.println("issueInstructions!"+robot+"!"+listInstructions+")");
+		//System.out.println("issueInstructions!"+robot+"!"+listInstructions+")");
+		Logger.getInstance().inform( ModelActions.issue_instructions, robot, listInstructions );
 	}
 
 	public void issueAllClear(){

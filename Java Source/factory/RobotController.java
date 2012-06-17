@@ -13,6 +13,7 @@ public class RobotController implements Runnable{
 	private boolean online;
 	private boolean shutdown;
 	private int error;
+	private Logger log = Logger.getInstance();
 	
 	/**
 	 * creates a new instance of the RobotController class.
@@ -53,7 +54,8 @@ public class RobotController implements Runnable{
 							//TODO: this needs to be changed to a call to the controller eventually, nack'ing the instruction.
 						}
 					}else if(!validZone(nextInstruction)){
-						System.out.println("rejection!"+robotNr+")");
+						//System.out.println("rejection!"+robotNr+")");
+						log.inform( ModelActions.rejection, robotNr );
 						System.err.println("Robot " + robotNr + ": " + nextInstruction + " is not a reachable zone, skipping.");
 						instructionSet = instructionSet.substring(1);
 					}
@@ -64,7 +66,8 @@ public class RobotController implements Runnable{
 					}
 				}
 				if(token){
-					System.out.println("forw_token!"+next_robot.getNr()+")");
+					//System.out.println("forw_token!"+next_robot.getNr()+")");
+					log.inform( ModelActions.forw_token, next_robot.getNr() );
 					setToken(false);
 					next_robot.setToken(true);
 				}
@@ -93,11 +96,17 @@ public class RobotController implements Runnable{
 		boolean result = true;
 		int nextRobot = (robotNr + 1) % FactoryModel.NR_OF_ROBOTS;
 		for (int i = nextRobot; !(i==robotNr); i = (i+1) % FactoryModel.NR_OF_ROBOTS){
-			System.out.println("requestClearance!"+robotNr+"!"+i+"!"+Zones.zoneType(zone)+")");
+			//System.out.println("requestClearance!"+robotNr+"!"+i+"!"+Zones.zoneType(zone)+")");
+			log.inform( ModelActions.requestClearance, robotNr, i, Zones.zoneType(zone) );
 			boolean iResult = factory.getRobot(i).grantPermission(zone);
 			result = result && iResult;
-			if (iResult) System.out.println("grantClearance!"+robotNr+")");
-			else System.out.println("denyClearance!"+robotNr+")");
+			if (iResult) {
+				//System.out.println("grantClearance!"+robotNr+")");
+				log.inform( ModelActions.grantClearance, robotNr );
+			} else {
+				//System.out.println("denyClearance!"+robotNr+")");
+				log.inform( ModelActions.denyClearance, robotNr );
+			}
 			
 		}
 		if(!result) System.err.println("Robot "+robotNr+": Permission to move to zone '"+zone+"' was denied. Passing token.");
@@ -164,7 +173,8 @@ public class RobotController implements Runnable{
 	}
 	
 	public void doneWork(){
-		System.out.println("confirmation!"+robotNr+")");
+		//System.out.println("confirmation!"+robotNr+")");
+		log.inform( ModelActions.confirmation, robotNr );
 		actuator.executeInstruction(Zones.IDLE);
 		//todo: some sort of ack/nack needs to be sent to the controller. In the current system, however,
 		//the controller is a human entity and as such, the "factorycontroller" is an unknown entity. Possibly do this with wait and notify?

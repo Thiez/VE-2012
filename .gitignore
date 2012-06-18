@@ -4,6 +4,7 @@
 *.lts
 *.trc
 *.pbes
+*.aut
 
 # Java stuff: #
 *.class

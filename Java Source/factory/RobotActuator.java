@@ -30,7 +30,7 @@ public class RobotActuator implements Runnable{
 			catch(InterruptedException e){System.out.println("oh noes, an interruptedException.");}
 			if(working){
 				//chance of 1 in 30 to stop working.
-				working = (new Random().nextInt(30) != 0);
+				working = (new Random().nextInt(15) != 0);
 				if (!working) reportDone();
 			}
 		}

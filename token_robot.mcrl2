@@ -3,7 +3,7 @@ sort
 	Error = struct actuator_error | sensor_error | communications_error | co_error;
 
 map	instructions : List(List(Zone));
-eqn	instructions = [[a,b],[a,b],[a,b]];
+eqn	instructions = [[a,b,c,d],[a,b,c,d],[a,b,c,d]];
 % eqn instructions = [[a,b,c],[a],[a]];
 
 map errors_on : Bool;

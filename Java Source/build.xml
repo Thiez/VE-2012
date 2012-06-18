@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project basedir="." default="makejar" name="Robots">
+    <property environment="env"/>
+    <property name="debuglevel" value="source,lines,vars"/>
+    <property name="target" value="1.5"/>
+    <property name="source" value="1.5"/>
+    <target name="build">
+        <echo message="${ant.project.name}: ${ant.file}"/>
+        <javac includeantruntime="false" debug="true" debuglevel="${debuglevel}" destdir="." source="${source}" target="${target}">
+            <src path="."/>
+        </javac>
+    </target>
+
+  <target name="makejar" depends="build" description="Create a jar for practicum">
+        <jar jarfile="robots.jar" includes="*.class" basedir=".">
+            <fileset dir=".">
+                 <include name="**/*.class"/>
+             </fileset>
+            <manifest>
+              <!-- Who is building this jar? -->
+              <attribute name="Built-By" value="${user.name}"/>
+              <!-- Information about the program itself -->
+              <attribute name="Implementation-Title" value="JTorX"/>
+              <!-- details -->
+              <attribute name="Main-class" value="implementation.Factory"/>
+            </manifest>
+        </jar>
+    </target>
+</project>

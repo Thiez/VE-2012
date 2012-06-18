@@ -17,7 +17,7 @@ public class FactoryModel {
 		platform = new Platform(this);
 		Thread p = new Thread(platform, "platform");
 		robots[0].setToken(true);
-		System.out.println("[System] Robots and Platform successfully intialized...");
+		System.err.println("[System] Robots and Platform successfully intialized...");
 		robot1.start();
 		robot2.start();
 		robot3.start();
@@ -36,5 +36,12 @@ public class FactoryModel {
 	
 	public RobotController getRobot(int robot){
 		return robots[robot];
+	}
+	
+	public void setError(int robotNr, int error){
+		for (int i=((robotNr+1) % robots.length); i!=robotNr; i=((i+1)%robots.length)){
+			robots[i].error(2);
+		}
+		System.err.println("[System] The following error has been detected in robot "+robotNr+": "+ Zones.errorTypes(error));
 	}
 }

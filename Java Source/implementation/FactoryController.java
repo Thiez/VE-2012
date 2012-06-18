@@ -15,6 +15,15 @@ public class FactoryController {
 			factory.notifyAll();
 		}
 		factory.getRobot(robot).addInstructions(instructions);
+		//commence the UGLY HACKING 8D
+		String listInstructions = "[";
+		for (int i = 0; i<instructions.length();i++){
+			listInstructions = listInstructions + instructions.substring(i,i+1) + ",";
+		}
+		int lastChar = listInstructions.length()-1;
+		listInstructions = listInstructions.substring(0,lastChar) + "]";
+		//System.out.println("issueInstructions!"+robot+"!"+listInstructions+")");
+		Logger.getInstance().inform( ModelActions.issue_instructions, robot, listInstructions );
 	}
 
 	public void issueAllClear(){
@@ -29,7 +38,7 @@ public class FactoryController {
 	
 	public boolean checkIfDone(){
 		boolean result = true;
-		for(int i = 0; i<FactoryModel.NR_OF_ROBOTS; i++) result = factory.getRobot(i).allDone();
+		for(int i = 0; i<FactoryModel.NR_OF_ROBOTS; i++) result = (factory.getRobot(i).allDone()) && result;
 		return result;
 	}
 	

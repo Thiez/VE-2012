@@ -1,0 +1,136 @@
+sort 
+	Zone = struct idle | a | b | c | d;
+	Error = struct actuator_error | sensor_error | communications_error | co_error;
+
+map	instructions : List(List(Zone));
+eqn	instructions = [[a,b],[a,b],[a,b]];
+% eqn instructions = [[a,b,c],[a],[a]];
+
+map errors_on : Bool;
+eqn errors_on = false;
+
+% External Interface
+act
+	recv_issue_instructions, send_issue_instructions, issue_instructions : Nat # Zone # Zone; % # Zone; % List(Zone);	%implemented as torX label @ FactoryController (issueInstructions)
+
+% Internal actions
+act
+	recv_bring_offline, send_bring_offline, bring_offline;										%implemented as torX label @ platform (bringOnline)
+	recv_bring_online, send_bring_online, bring_online;											%implemented as torX label @ platform (bringOnline)
+	recv_token, send_token, forw_token : Nat;													%implemented as torX label @ robotController (run)
+	recv_doneWork, send_doneWork, doneWork : Nat;												%implemented as torX label @ robotActuator (reportDone)
+	recv_confirmation, send_confirmation, confirmation : Nat;									%implemented as torX label @ robotController (doneWork)
+	recv_rejection, send_rejection, rejection : Nat;											%implemented as torX label @ robotController (run)
+	recv_requestClearance, send_requestClearance, requestClearance : Nat # Nat # Zone;			%implemented as torX label @ robotController (askPermission)
+	recv_denyClearance, send_denyClearance, denyClearance : Nat;								%implemented as torX label @ robotController (askPermission)
+	recv_grantClearance, send_grantClearance, grantClearance : Nat;								%implemented as torX label @ robotController (askPermission)
+	recv_moveToZone, send_moveToZone, moveToZone : Nat # Zone;									%implemented as torX label @ robotActuator (moveArm)
+	
+	recv_all_done, send_all_done, all_done : Nat;
+	recv_goError, send_goError, goError : Nat # Error;
+	fault : Nat # Error;
+	
+	% Platform internals
+	incoming_product, outgoing_product;
+	
+	recv_all_clear, send_all_clear, all_clear;
+	recv_all_clear_conf, send_all_clear_conf, all_clear_conf;
+
+proc
+	Permissions(nr:Nat, curr:Zone, want:List(Zone), token:Bool, working:Bool, online:Bool,myZones:Set(Zone)) =
+		(sum err:Error . recv_goError(nr,err) . delta) +
+		online -> (
+			(curr == idle) -> recv_bring_offline . Permissions(online=false) +	% only go offline if we are idle.
+			% sum more_wants:List(Zone) . recv_issue_instructions(nr,more_wants) . Permissions(want=want++more_wants) +
+			sum z1:Zone . sum z2:Zone . (z1 in myZones && z2 in myZones && z1 != idle && z2 != idle) ->  recv_issue_instructions(nr,z1,z2) . Permissions(want=(want <| z1) <| z2) +
+			recv_doneWork(nr) . send_moveToZone(nr,idle) . send_confirmation(nr) . ((want == []) -> send_all_done(nr) <> Permissions(curr=idle,working=false)) . Permissions(curr=idle,working=false) +
+			(sum targ:Zone . (want != [] && targ == head(want) && !working && !(targ in myZones)) -> (
+					send_rejection(nr) . ( (tail(want) == []) -> send_all_done(nr) <> Permissions(want=tail(want)) ) . Permissions(want=tail(want))
+				)) +
+			token -> (
+				(want == [] || working) -> send_token((nr+1) mod 3) . Permissions(token=false) +
+				sum targ:Zone . (want != [] && targ == head(want) && !working && targ in myZones) -> (
+					send_requestClearance(nr, (nr+1) mod 3, targ) . (
+						recv_denyClearance(nr) . send_token((nr+1) mod 3) . Permissions(token=false) + % If we can't get the zone. pass the token.
+						recv_grantClearance(nr) . send_requestClearance(nr, (nr+2) mod 3, targ) . (
+							recv_denyClearance(nr) . send_token((nr+1) mod 3) . Permissions(token=false) + % ditto.
+							recv_grantClearance(nr) . send_moveToZone(nr,targ) . Permissions(curr=targ,want=tail(want),working=true)
+						)
+					)
+				)
+			) <> (
+				recv_token(nr) . Permissions(token=true) +
+				sum reqz:Zone . sum other:Nat . (other < 3) -> recv_requestClearance(other,nr,reqz) . ( 
+					( reqz != curr || reqz == idle) -> % idle and any zone that isn't us = okay
+						send_grantClearance(other) <> send_denyClearance(other)) . Permissions()
+			)
+		) <> (
+			recv_bring_online . Permissions(online=true)
+		);
+	
+	Actuator(nr:Nat, curr:Zone, working:Bool) =
+		errors_on -> ( HaveError(nr,actuator_error) + HaveError(nr,sensor_error) ) +
+		sum targ:Zone . recv_moveToZone(nr,targ) .
+			(targ != idle) -> Actuator(curr=targ,working=true) <> Actuator(curr=targ) +	% If we go to a zone other than idle, start working
+		(working) -> send_doneWork(nr) . Actuator(working=false);
+	
+	HaveError(nr:Nat, err:Error) =
+		fault(nr,err) . send_goError(nr,err) . send_goError((nr+1) mod 3,co_error) . send_goError((nr+2) mod 3,co_error) . delta;
+	
+	Platform =
+		incoming_product . send_bring_online . recv_all_clear . send_bring_offline . outgoing_product . send_all_clear_conf . Platform;
+	
+	Instructor(done_0:Bool, done_1:Bool, done_2:Bool) =
+		recv_all_done(0) . Instructor(done_0 = true) +
+		recv_all_done(1) . Instructor(done_1 = true) +
+		recv_all_done(2) . Instructor(done_2 = true) +
+		sum n:Nat . (n<3) -> recv_confirmation(n) . Instructor() +
+		sum n:Nat . (n<3) -> recv_rejection(n) . Instructor() +
+		(done_0 && done_1 && done_2) -> send_all_clear . recv_all_clear_conf . Instruct(instructions);
+	
+	Instruct(inQueue:List(List(Zone))) =
+		(sum z1:Zone . sum z2:Zone . send_issue_instructions(0,z1,z2)) .
+		(sum z1:Zone . sum z2:Zone . send_issue_instructions(1,z1,z2)) .
+		(sum z1:Zone . sum z2:Zone . send_issue_instructions(2,z1,z2)) . Instructor(false,false,false);
+		% send_issue_instructions(0,inQueue.2) .
+		% send_issue_instructions(1,inQueue.1) .
+		% send_issue_instructions(2,inQueue.0) . Instructor(false, false, false);
+	
+proc
+	Robot0 = Permissions(0,idle,[],true ,false,false,{a,b,d,idle}) || Actuator(0,idle,false);
+	Robot1 = Permissions(1,idle,[],false,false,false,{a,c,d,idle}) || Actuator(1,idle,false);
+	Robot2 = Permissions(2,idle,[],false,false,false,{b,c,d,idle}) || Actuator(2,idle,false);
+	Robots = Robot0 || Robot1 || Robot2;
+	System = Platform || Robots;
+	Test = System || Instruct(instructions);
+
+init
+	 hide( { % we hide all except moveToZone, incoming_product, outgoing_product and issue_instructions
+	 bring_offline, bring_online, forw_token, doneWork, confirmation, requestClearance, denyClearance, grantClearance, all_clear, all_clear_conf, all_done , goError, fault, rejection
+	 },
+		allow(
+			{
+				bring_offline, bring_online, forw_token, doneWork, confirmation, requestClearance, denyClearance, grantClearance, moveToZone, issue_instructions, all_clear, all_clear_conf, incoming_product, outgoing_product, all_done , goError, fault, rejection
+			}, comm(
+				{
+					recv_bring_offline | recv_bring_offline | recv_bring_offline | send_bring_offline -> bring_offline,
+					recv_bring_online | recv_bring_online | recv_bring_online | send_bring_online -> bring_online,
+					recv_token |  send_token -> forw_token,
+					recv_doneWork | send_doneWork -> doneWork,
+					recv_confirmation | send_confirmation -> confirmation,
+					recv_rejection | send_rejection -> rejection,
+					recv_requestClearance | send_requestClearance -> requestClearance,
+					recv_denyClearance | send_denyClearance -> denyClearance,
+					recv_grantClearance | send_grantClearance -> grantClearance,
+					recv_moveToZone | send_moveToZone -> moveToZone,
+					recv_issue_instructions | send_issue_instructions -> issue_instructions,
+					recv_all_done | send_all_done -> all_done,
+					
+					recv_goError | send_goError -> goError,
+					
+					recv_all_clear | send_all_clear -> all_clear,
+					recv_all_clear_conf | send_all_clear_conf -> all_clear_conf
+				}, Test
+			)
+		)
+	);

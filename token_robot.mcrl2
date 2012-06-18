@@ -10,17 +10,17 @@ map errors_on : Bool;
 eqn errors_on = false;
 
 act
-	recv_bring_offline, send_bring_offline, bring_offline;
-	recv_bring_online, send_bring_online, bring_online;
-	recv_token, send_token, forw_token : Nat;
-	recv_doneWork, send_doneWork, doneWork : Nat;
-	recv_confirmation, send_confirmation, confirmation : Nat;
-	recv_rejection, send_rejection, rejection : Nat;
-	recv_requestClearance, send_requestClearance, requestClearance : Nat # Nat # Zone;
-	recv_denyClearance, send_denyClearance, denyClearance : Nat;
-	recv_grantClearance, send_grantClearance, grantClearance : Nat;
-	recv_moveToZone, send_moveToZone, moveToZone : Nat # Zone;
-	recv_issue_instructions, send_issue_instructions, issue_instructions : Nat # List(Zone);
+	recv_bring_offline, send_bring_offline, bring_offline;										%implemented as torX label @ platform (bringOnline)
+	recv_bring_online, send_bring_online, bring_online;											%implemented as torX label @ platform (bringOnline)
+	recv_token, send_token, forw_token : Nat;													%implemented as torX label @ robotController (run)
+	recv_doneWork, send_doneWork, doneWork : Nat;												%implemented as torX label @ robotActuator (reportDone)
+	recv_confirmation, send_confirmation, confirmation : Nat;									%implemented as torX label @ robotController (doneWork)
+	recv_rejection, send_rejection, rejection : Nat;											%implemented as torX label @ robotController (run)
+	recv_requestClearance, send_requestClearance, requestClearance : Nat # Nat # Zone;			%implemented as torX label @ robotController (askPermission)
+	recv_denyClearance, send_denyClearance, denyClearance : Nat;								%implemented as torX label @ robotController (askPermission)
+	recv_grantClearance, send_grantClearance, grantClearance : Nat;								%implemented as torX label @ robotController (askPermission)
+	recv_moveToZone, send_moveToZone, moveToZone : Nat # Zone;									%implemented as torX label @ robotActuator (moveArm)
+	recv_issue_instructions, send_issue_instructions, issue_instructions : Nat # List(Zone);	%implemented as torX label @ FactoryController (issueInstructions)
 	recv_all_done, send_all_done, all_done : Nat;
 	
 	recv_goError, send_goError, goError : Nat # Error;

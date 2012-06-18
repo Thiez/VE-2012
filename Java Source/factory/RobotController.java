@@ -4,16 +4,16 @@ import implementation.*;
 
 public class RobotController implements Runnable{
 	
-	private int robotNr;
-	private FactoryModel factory;
-	private String reachableZones;
-	private String instructionSet;
-	public RobotActuator actuator;
-	private boolean token;
-	private boolean online;
-	private boolean shutdown;
-	private int error;
-	private Logger log = Logger.getInstance();
+	private final int robotNr;
+	private final FactoryModel factory;
+	private final String reachableZones;
+	private volatile String instructionSet;
+	public final RobotActuator actuator;
+	private volatile boolean token;
+	private volatile boolean online;
+	private volatile boolean shutdown;
+	private volatile int error;
+	private final Logger log = Logger.getInstance();
 	
 	/**
 	 * creates a new instance of the RobotController class.

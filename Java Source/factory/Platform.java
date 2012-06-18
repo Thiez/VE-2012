@@ -37,10 +37,12 @@ public class Platform implements Runnable{
 	
 	public void newProduct(){
 		//Product is now available.
+		Logger.getInstance().inform( ModelActions.incoming_product );
 		setOnlineStatus(true);
 	}
 		
 	public void removeProduct(){
+		Logger.getInstance().inform( ModelActions.outgoing_product );
 		setOnlineStatus(false);
 		//Product is now no longer available.
 	}

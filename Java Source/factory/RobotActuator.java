@@ -4,11 +4,11 @@ import java.util.Random;
 
 public class RobotActuator implements Runnable{
 	
-	private Logger log = Logger.getInstance();
-	private char currentZone;
-	private RobotController controller;
-	private boolean working;
-	private boolean shutdown;
+	private final Logger log = Logger.getInstance();
+	private volatile char currentZone;
+	private final RobotController controller;
+	private volatile boolean working;
+	private volatile boolean shutdown;
 	private int error;
 	
 	public RobotActuator(RobotController parent){
@@ -22,7 +22,7 @@ public class RobotActuator implements Runnable{
 	 * returns the zone in which the robot currently resides.
 	 * @return char zone: a char which represents the current zone, where
 	 */
-	public  synchronized char getZone(){
+	public synchronized char getZone(){
 		return currentZone;
 	}
 	
@@ -100,7 +100,8 @@ public class RobotActuator implements Runnable{
 		int errorSeed = new Random().nextInt(500);
 		if (errorSeed == 0) result = 0;
 		else if (errorSeed == 1) result = 1;
-		return result;
+		//return result;
+		return -1;	// No errors!
 	}
 	
 	public void quit(){shutdown = true;}

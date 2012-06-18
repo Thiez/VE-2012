@@ -60,6 +60,11 @@ public class Logger extends Observable {
 		return instance;
 	}
 	
+	public void setVisible(ModelActions ... as) {
+		visible.clear();
+		addToVisible(as);
+	}
+	
 	public void addToVisible(ModelActions ... as) {
 		for (ModelActions a : as)
 			visible.add(a);
